@@ -1,35 +1,73 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react'
 
-function App() {
-  const [count, setCount] = useState(0)
+// 要先裝 chrome react dev tools 插件 才能用
+const findMyFiberNode = (root, targetComponentName) => {
+  let node = root;
+  while (node) {
+    if (node.type && node.type.name === targetComponentName) {
+      return node;
+    }
+    if (node.child) {
+      const found = findMyFiberNode(node.child, targetComponentName);
+      if (found) return found;
+    }
+    node = node.sibling;
+  }
+  return null;
+};
+
+function useFindNode(targetComponentName) {
+  useEffect(() => {
+    const devTools = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+    if (devTools) {
+      const fiberRoots = devTools.getFiberRoots(devTools.renderers.keys().next().value);
+      for (const root of fiberRoots) {
+        const myFiber = findMyFiberNode(root.current, targetComponentName);
+        if (myFiber) {
+          console.log(`${targetComponentName} Fiber Node:`, myFiber);
+        }
+      }
+    }
+  });
+}
+
+function useData(initData) {
+  const [data, setData] = useState(initData ?? 0)
+  return [data, setData]
+}
+
+
+function Parent() {
+  const [ data, setData ] = useData(0)
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div>
+      <h1>Parent</h1>
+      <p>{data}</p>
+      <button onClick={() => setData(data + 1)}>Increment</button>
+      <Child value={data}/>
+    </div>
   )
 }
 
-export default App
+function Child() {
+  const [ data, setData ] = useState(100)
+  const [ text, setText ] = useState('')
+
+  useFindNode('Child');
+
+  return (
+    <div>
+      <h1>Child</h1>
+      <p>{data}</p>
+      <button onClick={() => setData(data + 1)}>Increment</button>
+      <p>{text}</p>
+      {/* input the text */}
+      <input type="text" onChange={(e)=> setText(e.target.value)} />
+      
+
+    </div>
+  )
+}
+
+export default Parent
